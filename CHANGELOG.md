@@ -9,4 +9,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Add offline dependency risk scoring library and CLI with explainable reason breakdown, SPDX classification, and CI threshold exit codes
 - Initial project structure from the factory utility template.
