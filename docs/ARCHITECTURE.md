@@ -1,29 +1,40 @@
 # Architecture
 
-## Purpose
+## Overview
 
-`trysac-dependency-risk-score` is a small, dependency-free Python library: Score dependency risk from offline facts: release staleness, maintainer count, deprecation, known vulnerabilities and license category, with reasons and CI exit codes
+`dependency-risk-score` provides offline, deterministic risk scoring for package dependencies based on factual input data. It intentionally decouples fact-gathering (from registries, advisory databases, or package managers) from risk scoring.
 
-## Shape
-
-```text
-caller code --> dependency_risk_score (public API in __init__.py)
-                    |
-                    +-- pure functions, no I/O, no global state
+```
+[ JSON Facts File / String ]
+            │
+            ▼
+       load_facts()  ─── validates structure, sizes, and formats into immutable Package instances
+            │
+            ▼
+   score_package() / score_all()
+      - Computes release age relative to injected `as_of` date
+      - Evaluates maintainer counts (<= 1 triggers single_maintainer)
+      - Checks deprecation status
+      - Looks up SPDX license categories in DEFAULT_LICENSES
+      - Calculates capped vulnerability scores
+      - Derives final 0-100 score and risk level ('low', 'medium', 'high', 'critical')
+            │
+            ▼
+      [ RiskReport ]
 ```
 
-- **Public API**: the names listed in `__all__` of `src/dependency_risk_score/__init__.py`. Anything else is
-  internal and may change without a major version.
-- **Errors**: invalid input raises built-in exceptions (`ValueError`, `TypeError`) with a clear
-  message; the library never prints or exits.
-- **Side effects**: none. If a feature needs I/O, isolate it in its own module behind a small
-  interface and record the choice in an ADR.
+## Rule Evaluation Order
 
-## Quality contract
+Reasons are emitted in a strict, deterministic sequence:
+1. `aging_release` (366 - 730 days) or `stale_release` (> 730 days)
+2. `single_maintainer` (maintainers is 0 or 1)
+3. `deprecated`
+4. `weak_copyleft`, `strong_copyleft`, or `unknown_license`
+5. `vulnerability:<id>:<severity>` in original input order
 
-`scripts/check.py` is the single definition of the gates; `fabrica.json` tells the factory and CI
-how to run it. See [TESTING.md](TESTING.md).
+## Resource Limits
 
-## Decisions
-
-Architecture decisions are recorded in [decisions/](decisions/) as numbered ADRs.
+- `max_bytes`: 5,242,880 bytes (5 MiB) default max JSON payload.
+- `max_packages`: 10,000 maximum packages per facts file.
+- Maximum 1,000 vulnerabilities per package.
+- Strict 10-character ISO 8601 date checking (`YYYY-MM-DD`).

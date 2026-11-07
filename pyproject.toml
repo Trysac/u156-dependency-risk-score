@@ -19,6 +19,9 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+dependency-risk-score = "dependency_risk_score.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/Trysac/u156-dependency-risk-score"
 Source = "https://github.com/Trysac/u156-dependency-risk-score"
